@@ -41,7 +41,7 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
     private PolylineOptions rectOptions;
     private Polyline polyline;
     private Handler handler;
-    private final int UPDATE_INTERVAL = 10000; /* milliseconds */
+    private int UPDATE_INTERVAL;
     private String nmLinha;
     private AlertDialog alerta = null;
     private AlertDialog.Builder builder;
@@ -58,6 +58,10 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
 
         layout = (LinearLayout)findViewById(R.id.layoutMapa);
+
+        SharedPreferences sharedPreferences = getSharedPreferences("MyData", Context.MODE_PRIVATE);
+        UPDATE_INTERVAL = sharedPreferences.getInt("TempoAtualizacao", 10);
+        UPDATE_INTERVAL *= 1000; //convertendo para milisegundos
 
         handler = new Handler();
         handler.postDelayed(location, UPDATE_INTERVAL);

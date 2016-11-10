@@ -8,6 +8,7 @@ import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -23,6 +24,8 @@ import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,11 +45,14 @@ import java.util.List;
 public class ActivityMain extends AppCompatActivity
 
         implements NavigationView.OnNavigationItemSelectedListener {
+    private RelativeLayout layout;
     private TextView text_linha;
     private String code[], pontoDeParada;
     private AlertDialog alerta;
     private Localizacao localizacao;
     private ActivityMainPresenter presenter;
+    private ListView listView;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +78,8 @@ public class ActivityMain extends AppCompatActivity
             }
         });
 
+        layout = (RelativeLayout)findViewById(R.id.layoutMain);
+
         localizacao = new Localizacao(ActivityMain.this);
 
         text_linha = (TextView) findViewById(R.id.text_linha);
@@ -79,60 +87,81 @@ public class ActivityMain extends AppCompatActivity
         presenter = new ActivityMainPresenter(ActivityMain.this);
     }
 
-    public void exibirToast(String msg){
-        Toast.makeText(ActivityMain.this,msg,Toast.LENGTH_SHORT).show();
+//    @Override
+//    protected void onRestart() {
+//        //Log.i("Teste", "passou pelo onRestart()");
+//        presenter.iniciarServicoAtualizarLocalizacao();
+//        if(presenter.getFlag()){
+//            presenter.iniciarServicoMandarLocalizacao();
+//        }
+//        super.onRestart();
+//    }
+
+    public void exibirToast(String msg) {
+        Toast.makeText(ActivityMain.this, msg, Toast.LENGTH_SHORT).show();
     }
 
-    public void setText_linha(String text){
+    public void TentarNovamenteBuscarPontosDeParada(){
+        final int duracao = 5000;
+        Snackbar snackbar = Snackbar
+                .make(layout, "Ops ocorreu uma falha", Snackbar.LENGTH_INDEFINITE)
+                .setDuration(duracao)
+                .setAction("Tentar Novamente", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        presenter.buscarPontosdeParada();
+                    }
+                });
+        snackbar.show();
+    }
+
+    public void setText_linha(String text) {
         text_linha.setText(text);
     }
 
-    public void atualizarCont(){
+    public void atualizarCont() {
         presenter.atualizarContador();
     }
 
     //metodo chamado depois que o usuario faz o scanner do Qrcode
-    public void mostrarPopupOpcoesDePontodeParada(List<String> pontos) {
+    public void mostrarPopupOpcoesDePontodeParada() {
         LayoutInflater li = getLayoutInflater();
         View view = li.inflate(R.layout.my_dialog_opcoes_parada, null);
-        ListView listView = (ListView) view.findViewById(R.id.listaOpcoesPontoParada);
+        listView = (ListView) view.findViewById(R.id.listaOpcoesPontoParada);
+        listView.setVisibility(View.INVISIBLE);
+        progressBar = (ProgressBar) view.findViewById(R.id.progressOpcoesParada);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(view);
+        builder.setCancelable(false);
+
+        alerta = builder.create();
+        alerta.show();
+    }
+
+    public void fecharPopupOpcoesDePontodeParada(){
+        alerta.dismiss();
+    }
+
+    public void mostrarListaOpcoesPontosDeParada(List<String> pontos){
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, pontos);
         listView.setAdapter(adapter);
+
+        progressBar.setVisibility(View.INVISIBLE);
+        listView.setVisibility(View.VISIBLE);
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapter, View view, int position, long id) {
                 pontoDeParada = (String) adapter.getItemAtPosition(position);
                 Toast.makeText(ActivityMain.this, "Ok, você irá descer no ponto: " + pontoDeParada, Toast.LENGTH_SHORT).show();
-                alerta.dismiss();
+                fecharPopupOpcoesDePontodeParada();
                 presenter.iniciarServicoMandarLocalizacao();
             }
         });
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setView(view);
-        builder.setCancelable(false);
-//        builder.setPositiveButton(R.string.Ok, new DialogInterface.OnClickListener() {
-//            public void onClick(DialogInterface arg0, int arg1) {
-//                if (month.getValue() < 10) {
-//                    String mes = "0" + (month.getValue());
-//                    String ano = "" + year.getValue();
-//                    edtValidade.setText(mes + "/" + ano);
-//                } else {
-//                    String mes = "" + (month.getValue());
-//                    String ano = "" + year.getValue();
-//                    edtValidade.setText(mes + "/" + ano);
-//                }
-//            }
-//        });
-//        builder.setNegativeButton(R.string.Cancelar,
-//                new DialogInterface.OnClickListener() {
-//                    public void onClick(DialogInterface arg0, int arg1) {
-//                    }
-//                });
-        alerta = builder.create();
-        alerta.show();
     }
+
+
 
     //leitura do QrCode
     public void ScanQrCode() {
@@ -145,7 +174,7 @@ public class ActivityMain extends AppCompatActivity
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
-            presenter.onActivityResult(requestCode,resultCode, data);
+            presenter.onActivityResult(requestCode, resultCode, data);
         }
     }
 
@@ -188,13 +217,24 @@ public class ActivityMain extends AppCompatActivity
                 String cidade = localizacao.buscar("cidade", location);
                 it.putExtra("cidade", cidade);
                 startActivity(it);
-            }catch (Exception e){
-                Log.e("Teste","Error em onNavigationItemSelected >>>:"+e.getMessage());
+            } catch (Exception e) {
+                Log.e("Teste", "Error em onNavigationItemSelected >>>:" + e.getMessage());
             }
-        }  else if (id == R.id.qrCode) {
+        } else if (id == R.id.qrCode) {
             presenter.fazerLeituraQrCode();
         } else if (id == R.id.descerBus) {
+            presenter.setFlag(false);
             presenter.pararServicoMandarLocalizacao();
+        } else if (id == R.id.maisInformacoes) {
+            Intent it = new Intent(ActivityMain.this, ActivityMaisInformacoes.class);
+            String location = new String(presenter.getMyLocation());
+            String cidade = localizacao.buscar("cidade", location);
+            it.putExtra("cidade", cidade);
+            startActivity(it);
+        } else if (id == R.id.sobreNos) {
+            startActivity(new Intent(ActivityMain.this, ActivitySobreNos.class));
+        } else if (id == R.id.configuracoes) {
+            startActivity(new Intent(ActivityMain.this, ActivityConfiguracoes.class));
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -203,7 +243,18 @@ public class ActivityMain extends AppCompatActivity
 
     @Override
     protected void onDestroy() {
+        presenter.pararServicoMandarLocalizacao();
         presenter.pararServicoAtualizarLocalizacao();
         super.onDestroy();
     }
+
+
+//    @Override
+//    protected void onStop() {
+//        presenter.pararServicoAtualizarLocalizacao();
+//        if(presenter.getFlag()){
+//            presenter.pararServicoMandarLocalizacao();
+//        }
+//        super.onStop();
+//    }
 }

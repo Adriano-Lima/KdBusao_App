@@ -6,9 +6,11 @@ import android.widget.Toast;
 
 import com.example.adriano.ihc.Activity.ActivityEscolherOnibus;
 import com.example.adriano.ihc.Activity.ActivityMain;
+import com.example.adriano.ihc.Activity.ActivityMaisInformacoes;
 import com.example.adriano.ihc.Activity.ActivityMapa;
 import com.example.adriano.ihc.Model.Atualizacao;
 import com.example.adriano.ihc.Model.Bus;
+import com.example.adriano.ihc.Model.Informacao;
 import com.example.adriano.ihc.Model.PontoParada;
 import com.example.adriano.ihc.Model.Resposta;
 import com.google.gson.Gson;
@@ -60,7 +62,7 @@ public class ComunicaServidor {
                 if (code == 200) {
                     resposta = response.body(); //resposta do servidor
                     ((ActivityMain) context).atualizarCont();
-                    mostrarAviso("Resposta >>>:" + resposta.getMsg());/////// só para testes
+                    mostrarAviso("Localização envida ao servidor!");/////// só para testes
                 } else { //caso a resposta nao seja 200 ok
                     mostrarAviso("Erro ao enviar a localização ao servidor");
                 }
@@ -160,6 +162,36 @@ public class ComunicaServidor {
             @Override
             public void onFailure(Call<List<String>> call, Throwable t) {
                 ((ActivityEscolherOnibus) context).exibirOpcaoTentarNovamente();
+            }
+        });
+    }
+
+    public void getInformacoes(String cidade) {
+        Gson gson = new GsonBuilder()
+                .setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
+                .create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(RetrofitInterface.Mockap)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        RetrofitInterface retrofitInterface = retrofit.create(RetrofitInterface.class);
+        Call<List<Informacao>> call = retrofitInterface.getInformacoes(cidade);
+        call.enqueue(new Callback<List<Informacao>>() {
+            @Override
+            public void onResponse(Call<List<Informacao>> call, Response<List<Informacao>> response) {
+                int code = response.code();
+                if (code == 200) {
+                    List<Informacao> lista = response.body(); //resposta do servidor
+                    ((ActivityMaisInformacoes) context).mostrarEmpresas(lista);
+                } else { //caso a resposta nao seja 200 ok
+                    mostrarAviso("Falha na comunicação com servidor");
+                }
+            }
+
+            //caso o aparelho esteja sem conexao com a internet
+            @Override
+            public void onFailure(Call<List<Informacao>> call, Throwable t) {
+                mostrarAviso("Erro na conexão com a internet");
             }
         });
     }

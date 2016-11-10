@@ -2,6 +2,7 @@ package com.example.adriano.ihc.Presenter;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -38,7 +39,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class ActivityMainPresenter {
     private ActivityMain activityMain;
     private Handler handler;
-    private final int UPDATE_INTERVAL = 10000; /* milliseconds */
+    private int UPDATE_INTERVAL;
     private boolean gps_enabled, isConnected;
     private boolean flagServicoMandarlocalizacao;
     private LocationManager lm;
@@ -49,6 +50,7 @@ public class ActivityMainPresenter {
     private int cont, tentativaMandarLocalizacao;
     private SimpleDateFormat ft;
     private String code[], mylocation;
+    private SharedPreferences sharedPreferences;
 
 
     public ActivityMainPresenter(ActivityMain activityMain) {
@@ -60,10 +62,14 @@ public class ActivityMainPresenter {
         cont = 0;
         tentativaMandarLocalizacao = 0;
 
+        sharedPreferences = activityMain.getSharedPreferences("MyData", Context.MODE_PRIVATE);
+        UPDATE_INTERVAL = sharedPreferences.getInt("TempoEnviarLocalizacao", 10);
+        UPDATE_INTERVAL *= 1000; //convertendo para milisegundos
+
         ft = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 
         localizacao = new Localizacao(activityMain);
-        localizacao.start();
+        iniciarServicoAtualizarLocalizacao();
 
         comunicacaoServidor = new ComunicaServidor(activityMain);
     }
@@ -73,26 +79,47 @@ public class ActivityMainPresenter {
 
     }
 
+    public void setFlag(boolean b) {
+        flagServicoMandarlocalizacao = b;
+    }
+
+    public boolean getFlag() {
+        return flagServicoMandarlocalizacao;
+    }
+
+    public void atualizarContador() {
+        cont++;
+    }
+
     public void fazerLeituraQrCode() {
-        try {
-            gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-            isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
-        } catch (Exception ex) {
-            Log.e("Teste", "Erro em ActivityMain >>:" + ex.getMessage());
-        }
-        //fazendo as verificações de conexão com a internet e localização
-        if (!gps_enabled) { //se o gps estiver desativado
-            activityMain.exibirToast("Não é possível obter sua localização atual!");
-        } else if (!isConnected) {//se o usuario nao estiver conectado a internet
-            activityMain.exibirToast("Por vafor verifique sua conexão com a internet!");
-        } else { //se estiver tudo ok, fazer a leitura do QrCode
-            if (!flagServicoMandarlocalizacao) {
-                activityMain.ScanQrCode();
-            } else {
-                activityMain.exibirToast("Ops, você já fez a leitura do QrCode. Primeiro escolha a opção descer do ônibus ;)");
-            }
-        }
+        //em produção descomentar essa parte
+//        try {
+//            gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+//            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+//            isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+//        } catch (Exception ex) {
+//            Log.e("Teste", "Erro em ActivityMain >>:" + ex.getMessage());
+//        }
+//        //fazendo as verificações de conexão com a internet e localização
+//        if (!gps_enabled) { //se o gps estiver desativado
+//            activityMain.exibirToast("Não é possível obter sua localização atual!");
+//        } else if (!isConnected) {//se o usuario nao estiver conectado a internet
+//            activityMain.exibirToast("Por vafor verifique sua conexão com a internet!");
+//        } else { //se estiver tudo ok, fazer a leitura do QrCode
+//            if (!flagServicoMandarlocalizacao) {
+//                activityMain.ScanQrCode();
+//            } else {
+//                activityMain.exibirToast("Ops, você já fez a leitura do QrCode. Primeiro escolha a opção descer do ônibus ;)");
+//            }
+//        }
+
+
+        //só para testes
+        code =  new String[2];
+        code[0] = "2510";
+        code[1] = "T131";
+        buscarPontosdeParada();
+        //////////////////
     }
 
     //metodo para mandar a localizacao atual do usuario para o servidor
@@ -102,7 +129,12 @@ public class ActivityMainPresenter {
         //calculando o delta T (diferença de tempo)
         long diffSeconds = (diff / 1000) % 60;
         time = time2;
-        if (cont == 0 || !mylocation.equalsIgnoreCase(location)) {
+        if (cont == 0) {
+            String DateToStr = ft.format(new Date());
+            Atualizacao atualizacao = new Atualizacao(code[0], cont, mylocation, DateToStr, "0", "0");
+            comunicacaoServidor.mandarLocalizacao(atualizacao);
+            Log.i("Teste", " --- primeira mensagem eviada--- :" + location);/////////////////
+        } else if (!mylocation.equalsIgnoreCase(location)) {
             //calculando a distância percorrida em metros
             double distancia = CalcCoordenadas.distancia(location, mylocation);
             String dist = String.valueOf(distancia);
@@ -114,33 +146,28 @@ public class ActivityMainPresenter {
             deltaV *= 3.6; //transformando em km/h
             String velocidade = String.valueOf(deltaV);
 
-//        if (distancia >= 10 && deltaV >= 10) {
-            String DateToStr = ft.format(new Date());
-            Atualizacao atualizacao = new Atualizacao(code[0], cont, mylocation, DateToStr, dist, velocidade);
-            comunicacaoServidor.mandarLocalizacao(atualizacao);
-//        } else if (distancia <= 1) { // usuario deve estar parado
-//            Toast.makeText(ActivityMain.this, "Ops, parece que você está no mesmo lugar.", Toast.LENGTH_SHORT).show();
-//            tentativaMandarLocalizacao++;
-//        } else if (deltaV < 10) { //usuario deve estar a pé
-//            Toast.makeText(ActivityMain.this, "Ops, parece que você está andando a pé.", Toast.LENGTH_SHORT).show();
-//            tentativaMandarLocalizacao++;
-//        }
-            //só para testes
-            Log.i("Teste", " --- a localizacao foi alterada --- :" + location);/////////////////
-//            Log.i("Teste", "atualizou em >>:" + diffSeconds + " segundos");//////////
-//            Log.i("Teste", "distancia percorrida >>:" + distancia);/////////////////
-//            Log.i("Teste", "velocidade >>:" + deltaV + " km/h");//////////
-        } else {
+            if (distancia >= 25 && deltaV >= 10) {
+                String DateToStr = ft.format(new Date());
+                Atualizacao atualizacao = new Atualizacao(code[0], cont, mylocation, DateToStr, dist, velocidade);
+                comunicacaoServidor.mandarLocalizacao(atualizacao);
+                Log.i("Teste", " --- a localizacao foi alterada --- :" + location);/////////////////
+            } else if (distancia < 15 || deltaV < 10) { // usuario deve estar parado
+                tentativaMandarLocalizacao++;
+                Log.i("Teste", " --- usuario deve estar no mesmo lugar--- :" + location + " contador >>:" + tentativaMandarLocalizacao);/////////////////
+            }
+        } else {//usuário está no mesmo lugar
             tentativaMandarLocalizacao++;
-            //só para testes
-            Log.i("Teste", " --- mesmo lugar  --- :" + location);/////////////////
-//            Log.i("Teste", "atualizou em >>:" + diffSeconds + " segundos");//////////
+            Log.i("Teste", " --- mesmo lugar  --- :" + location + " contador >>:" + tentativaMandarLocalizacao);/////////////////
         }
 
-        //        if (tentativaMandarLocalizacao >= 30) { //algo esta errado parar de mandar a localizacao para o servidor
-//            tentativaMandarLocalizacao = 0;
-//            pararServicoMandarLocalizacao();
-//        }
+        if (tentativaMandarLocalizacao >= 30) { //algo esta errado parar de mandar a localizacao para o servidor
+            flagServicoMandarlocalizacao = false;
+            pararServicoMandarLocalizacao();
+        }
+    }
+
+    public void iniciarServicoAtualizarLocalizacao() {
+        localizacao.start();
     }
 
     public void iniciarServicoMandarLocalizacao() {
@@ -159,7 +186,11 @@ public class ActivityMainPresenter {
         public void run() {
             String location = new String(localizacao.getLocalAtual());
             setLocation(location);
-            handler.postDelayed(this, UPDATE_INTERVAL);
+            if (handler != null) {
+                UPDATE_INTERVAL = sharedPreferences.getInt("TempoEnviarLocalizacao", 10);
+                UPDATE_INTERVAL *= 1000; //convertendo para milisegundos
+                handler.postDelayed(this, UPDATE_INTERVAL);
+            }
         }
     };
 
@@ -168,8 +199,8 @@ public class ActivityMainPresenter {
             handler.removeCallbacks(location);
             handler = null;
         }
-        flagServicoMandarlocalizacao = false;
         cont = 0;
+        tentativaMandarLocalizacao = 0;
         activityMain.setText_linha("");
         activityMain.exibirToast("Ok, obrigado pela sua colaboração! :)");
     }
@@ -182,12 +213,13 @@ public class ActivityMainPresenter {
         //no QrCode string com: idOnibus,linha
         String result = data.getStringExtra("SCAN_RESULT");
         code = result.split(",");
-        activityMain.setText_linha("Abordo:" + code[1]);
-        getPontos(code[1]);
+        buscarPontosdeParada();
     }
 
-    public void atualizarContador() {
-        cont++;
+    public void buscarPontosdeParada(){
+        activityMain.setText_linha("Abordo:" + code[1]);
+        activityMain.mostrarPopupOpcoesDePontodeParada();
+        getPontos(code[1]);
     }
 
     private void getPontos(String linha) {
@@ -210,16 +242,18 @@ public class ActivityMainPresenter {
                     for (PontoParada p : lista) {
                         pontos.add(new String(p.getDescricao()));
                     }
-                    activityMain.mostrarPopupOpcoesDePontodeParada(pontos);
+                    activityMain.mostrarListaOpcoesPontosDeParada(pontos);
                 } else { //caso a resposta nao seja 200 ok
-                    activityMain.exibirToast("Falha na comunicação com servidor");
+                    activityMain.TentarNovamenteBuscarPontosDeParada();
+                    activityMain.fecharPopupOpcoesDePontodeParada();
                 }
             }
 
             //caso o aparelho esteja sem conexao com a internet
             @Override
             public void onFailure(Call<List<PontoParada>> call, Throwable t) {
-                activityMain.exibirToast("Erro na conexão com a internet");
+                activityMain.TentarNovamenteBuscarPontosDeParada();
+                activityMain.fecharPopupOpcoesDePontodeParada();
             }
         });
     }

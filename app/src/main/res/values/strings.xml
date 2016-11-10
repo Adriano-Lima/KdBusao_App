@@ -69,4 +69,12 @@
     <string name="pref_ringtone_silent">Silent</string>
 
     <string name="pref_title_vibrate">Vibrate</string>
+
+
+    <string name="Msg">
+        Este app refere-se um projeto da disciplina de PDSI.
+        \n\nPara o desenvolvimentto deste aplicativo juntamente com o servidor,
+        formou-se um grupo de cinco alunos, sendo eles:\nAdriano Lima,\nDiego de Freitas,\nGustavo Vieira,\nMatheus Ribeiro,\nThiago Amorim.\n
+        \nEssa equipe foi orientada pelo professor Mauricio Amaral.
+    </string>
 </resources>

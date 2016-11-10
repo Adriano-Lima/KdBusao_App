@@ -1,28 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <group android:checkableBehavior="single">
-        <item
-            android:id="@+id/buscarBus"
-            android:icon="@drawable/bus"
-            android:title="Localizar ônibus" />
-        <item
-            android:id="@+id/qrCode"
-            android:icon="@drawable/qrcode2"
-            android:title="Fazer leitura QrCode" />
-        <item
-            android:id="@+id/descerBus"
-            android:icon="@drawable/bus"
-            android:title="Descer do ônibus" />
-    </group>
+    <item android:title="Ônibus">
+        <menu>
+            <item
+                android:id="@+id/buscarBus"
+                android:icon="@drawable/bus"
+                android:title="Localizar ônibus" />
+            <item
+                android:id="@+id/qrCode"
+                android:icon="@drawable/qrcode2"
+                android:title="Fazer leitura QrCode" />
+            <item
+                android:id="@+id/descerBus"
+                android:icon="@drawable/bus"
+                android:title="Descer do ônibus" />
+        </menu>
+    </item>
+    <item android:title="Informações">
+        <menu>
+            <item
+                android:id="@+id/maisInformacoes"
+                android:icon="@android:drawable/ic_dialog_info"
+                android:title="Mais informações" />
 
-    <!--<item android:title="Communicate">-->
-        <!--<menu>-->
-            <!--<item-->
-                <!--android:id="@+id/nav_share"-->
-                <!--android:icon="@drawable/ic_menu_share"-->
-                <!--android:title="Compartilhar" />-->
-        <!--</menu>-->
-    <!--</item>-->
-
+            <item
+                android:id="@+id/sobreNos"
+                android:icon="@drawable/ic_help"
+                android:title="Sobre Nós" />
+        </menu>
+    </item>
+    <item
+        android:id="@+id/configuracoes"
+        android:icon="@drawable/ic_menu_manage"
+        android:title="Configurações" />
 </menu>
