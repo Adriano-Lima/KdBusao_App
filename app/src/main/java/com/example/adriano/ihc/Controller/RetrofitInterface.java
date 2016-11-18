@@ -2,6 +2,7 @@ package com.example.adriano.ihc.Controller;
 
 import com.example.adriano.ihc.Model.Atualizacao;
 import com.example.adriano.ihc.Model.Bus;
+import com.example.adriano.ihc.Model.Empresa;
 import com.example.adriano.ihc.Model.Informacao;
 import com.example.adriano.ihc.Model.PontoParada;
 import com.example.adriano.ihc.Model.Resposta;
@@ -16,15 +17,9 @@ import retrofit2.http.POST;
 import retrofit2.http.Path;
 
 public interface RetrofitInterface {
-    String Mockap = "http://191.55.5.65:8080";
+    String Mockap = "http://192.168.0.13:8080";
     //String Mockap = "http://10.15.44.123:8080";
 
-//    @GET("/user")
-//    Call<User> getUser();
-//
-//    @GET("/parcelas")
-//    Call<OpcoesdePagamento> getOpcoes();
-//
     @POST("/bus/onibus/posicao")
     Call<Resposta> setLocation(@Body Atualizacao atualizacao);
 
@@ -37,6 +32,9 @@ public interface RetrofitInterface {
     @GET("/pontosParada/{linha}")
     Call<List<PontoParada>> getPontosParada(@Path("linha") String linha);
 
-    @GET(".../{cidade}")
+    @GET("informacoes/{cidade}")
     Call<List<Informacao>> getInformacoes(@Path("cidade") String cidade);
+
+    @GET("empresas/{cidade}/{coordenadas}")
+    Call<List<Empresa>> getEmpresas(@Path("cidade") String cidade, @Path("coordenadas") String coordenadas);
 }

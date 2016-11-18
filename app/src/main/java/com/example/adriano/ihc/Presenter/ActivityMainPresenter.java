@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.Toast;
@@ -18,9 +19,14 @@ import com.example.adriano.ihc.Controller.Localizacao;
 import com.example.adriano.ihc.Controller.RetrofitInterface;
 import com.example.adriano.ihc.Model.Atualizacao;
 import com.example.adriano.ihc.Model.PontoParada;
+import com.example.adriano.ihc.R;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -47,11 +53,12 @@ public class ActivityMainPresenter {
     private ComunicaServidor comunicacaoServidor;
     private long time;
     private Localizacao localizacao;
-    private int cont, tentativaMandarLocalizacao;
+    private int cont, tentativaMandarLocalizacao, distanciaMinima, velocidadeMinima;
     private SimpleDateFormat ft;
     private String code[], mylocation;
     private SharedPreferences sharedPreferences;
 
+    private BufferedWriter escritor;
 
     public ActivityMainPresenter(ActivityMain activityMain) {
         this.activityMain = activityMain;
@@ -66,6 +73,7 @@ public class ActivityMainPresenter {
         UPDATE_INTERVAL = sharedPreferences.getInt("TempoEnviarLocalizacao", 10);
         UPDATE_INTERVAL *= 1000; //convertendo para milisegundos
 
+
         ft = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 
         localizacao = new Localizacao(activityMain);
@@ -74,9 +82,29 @@ public class ActivityMainPresenter {
         comunicacaoServidor = new ComunicaServidor(activityMain);
     }
 
+
+    private void criarEscritor(){
+        //só para teste
+        try {
+            String timeStamp = new SimpleDateFormat("ddMMyyyy_HHmm").format(new Date());
+            escritor = new BufferedWriter(new FileWriter(new File(getStorageDir(),"log"+timeStamp+".txt")));
+        }catch (Exception e){
+            Log.e("Teste", "erro ao criar o arquivo de log >>:"+e.getMessage());
+        }
+    }
+
+    //retornando a pasta onde serao salvas as assinaturas no aparelho
+    private File getStorageDir() {
+        String caminhoArquivo = Environment.getExternalStorageDirectory() + "/LogKdBusao";
+        File file = new File(caminhoArquivo);
+        if (!file.exists()) {
+            file.mkdir();
+        }
+        return file;
+    }
+
     public String getMyLocation() {
         return localizacao.getLocalAtual();
-
     }
 
     public void setFlag(boolean b) {
@@ -146,22 +174,32 @@ public class ActivityMainPresenter {
             deltaV *= 3.6; //transformando em km/h
             String velocidade = String.valueOf(deltaV);
 
-            if (distancia >= 25 && deltaV >= 10) {
+            distanciaMinima = sharedPreferences.getInt("DistanciaMinima",15);
+            velocidadeMinima = sharedPreferences.getInt("VelocidadeMinima",10);
+            if (distancia >= distanciaMinima && deltaV >= velocidadeMinima) {
                 String DateToStr = ft.format(new Date());
                 Atualizacao atualizacao = new Atualizacao(code[0], cont, mylocation, DateToStr, dist, velocidade);
                 comunicacaoServidor.mandarLocalizacao(atualizacao);
                 Log.i("Teste", " --- a localizacao foi alterada --- :" + location);/////////////////
-            } else if (distancia < 15 || deltaV < 10) { // usuario deve estar parado
+            } else if (distancia < distanciaMinima || deltaV < velocidadeMinima) { // usuario deve estar parado
                 tentativaMandarLocalizacao++;
                 Log.i("Teste", " --- usuario deve estar no mesmo lugar--- :" + location + " contador >>:" + tentativaMandarLocalizacao);/////////////////
+                String DateToStr = ft.format(new Date());////////////
+                escreverNoLog("---------------------\n");
+                escreverNoLog("Localizacao nao enviada, distancia >>"+distancia+ " velocidade >>"+deltaV+ " data >>"+DateToStr+"\n");/////////////////
             }
         } else {//usuário está no mesmo lugar
             tentativaMandarLocalizacao++;
             Log.i("Teste", " --- mesmo lugar  --- :" + location + " contador >>:" + tentativaMandarLocalizacao);/////////////////
+            String DateToStr = ft.format(new Date());///////////////
+            escreverNoLog("---------------------\n");
+            escreverNoLog("Localizacao nao enviada, usuario esta no mesmo lugar >>"+DateToStr+"\n");//////////////
         }
 
         if (tentativaMandarLocalizacao >= 30) { //algo esta errado parar de mandar a localizacao para o servidor
             flagServicoMandarlocalizacao = false;
+            String DateToStr = ft.format(new Date());//////////////
+            escreverNoLog("Chegou no limite de tentativas de mandar localizacao >>"+DateToStr);////////////
             pararServicoMandarLocalizacao();
         }
     }
@@ -172,6 +210,8 @@ public class ActivityMainPresenter {
 
     public void iniciarServicoMandarLocalizacao() {
         if (handler == null) {
+            criarEscritor();//////////só para testes
+            activityMain.esconderImagem();
             handler = new Handler();
             handler.postDelayed(location, UPDATE_INTERVAL);
             time = new Date().getTime();
@@ -201,6 +241,8 @@ public class ActivityMainPresenter {
         }
         cont = 0;
         tentativaMandarLocalizacao = 0;
+        fecharEscritor();
+        activityMain.mostrarImagem();
         activityMain.setText_linha("");
         activityMain.exibirToast("Ok, obrigado pela sua colaboração! :)");
     }
@@ -256,6 +298,25 @@ public class ActivityMainPresenter {
                 activityMain.fecharPopupOpcoesDePontodeParada();
             }
         });
+    }
+
+
+    //só para testes
+    public void escreverNoLog(String log){
+        try{
+            escritor.write(log);
+            escritor.flush();
+        }catch (Exception e){
+            Log.e("Teste", "erro ao escrever no arquivo >>:"+e.getMessage());
+        }
+    }
+
+    public void fecharEscritor(){
+        try {
+            escritor.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

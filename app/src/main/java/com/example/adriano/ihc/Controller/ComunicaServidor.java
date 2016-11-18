@@ -10,11 +10,13 @@ import com.example.adriano.ihc.Activity.ActivityMaisInformacoes;
 import com.example.adriano.ihc.Activity.ActivityMapa;
 import com.example.adriano.ihc.Model.Atualizacao;
 import com.example.adriano.ihc.Model.Bus;
+import com.example.adriano.ihc.Model.Empresa;
 import com.example.adriano.ihc.Model.Informacao;
 import com.example.adriano.ihc.Model.PontoParada;
 import com.example.adriano.ihc.Model.Resposta;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonReader;
 
 import java.util.List;
 
@@ -45,7 +47,7 @@ public class ComunicaServidor {
         mainHandler.post(myRunnable);
     }
 
-    public void mandarLocalizacao(Atualizacao atualizacao) {
+    public void mandarLocalizacao(final Atualizacao atualizacao) {
         Gson gson = new GsonBuilder()
                 .setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
                 .create();
@@ -63,8 +65,12 @@ public class ComunicaServidor {
                     resposta = response.body(); //resposta do servidor
                     ((ActivityMain) context).atualizarCont();
                     mostrarAviso("Localização envida ao servidor!");/////// só para testes
+                    ((ActivityMain)context).escreverNoLog("---------------------\n");
+                    ((ActivityMain)context).escreverNoLog("Localização envida ao servidor! - "+atualizacao.getData()+" dist >:"+atualizacao.getDistancia()+" vel >:"+atualizacao.getVelocidade()+"\n");/////////
                 } else { //caso a resposta nao seja 200 ok
                     mostrarAviso("Erro ao enviar a localização ao servidor");
+                    ((ActivityMain)context).escreverNoLog("---------------------\n");
+                    ((ActivityMain)context).escreverNoLog("Erro ao enviar a localização ao servidor! - "+atualizacao.getData()+"\n");////////////
                 }
             }
 
@@ -72,6 +78,8 @@ public class ComunicaServidor {
             @Override
             public void onFailure(Call<Resposta> call, Throwable t) {
                 mostrarAviso("Erro na conexão com a internet");
+                ((ActivityMain)context).escreverNoLog("---------------------\n");
+                ((ActivityMain)context).escreverNoLog("Falha na conexao com a internet! - "+atualizacao.getData()+"\n");////////////
             }
         });
     }
@@ -196,5 +204,34 @@ public class ComunicaServidor {
         });
     }
 
+    public void getEmpresas(String cidade, String coordenadas) {
+        Gson gson = new GsonBuilder()
+                .setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
+                .create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(RetrofitInterface.Mockap)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        RetrofitInterface retrofitInterface = retrofit.create(RetrofitInterface.class);
+        Call<List<Empresa>> call = retrofitInterface.getEmpresas(cidade, coordenadas);
+        call.enqueue(new Callback<List<Empresa>>() {
+            @Override
+            public void onResponse(Call<List<Empresa>> call, Response<List<Empresa>> response) {
+                int code = response.code();
+                if (code == 200) {
+                    List<Empresa> lista = response.body(); //resposta do servidor
+                    ((ActivityMapa) context).exibirEmpresas(lista);
+                } else { //caso a resposta nao seja 200 ok
+                    mostrarAviso("Falha na comunicação com servidor getEmpresas(), code >>>:"+code);
+                }
+            }
+
+            //caso o aparelho esteja sem conexao com a internet
+            @Override
+            public void onFailure(Call<List<Empresa>> call, Throwable t) {
+                mostrarAviso("Erro na conexão com a internet");
+            }
+        });
+    }
 
 }

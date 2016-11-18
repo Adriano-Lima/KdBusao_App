@@ -32,7 +32,7 @@ public class ActivityEscolherOnibus extends AppCompatActivity {
     private LinearLayout layout;
     private ArrayList<String> arrayList;
     private ArrayAdapter<String> adapter;
-    private String linha, cidade;
+    private String linha, cidade, coordenadas;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +42,10 @@ public class ActivityEscolherOnibus extends AppCompatActivity {
 
         if (getIntent().getExtras().containsKey("cidade")) {
             cidade = getIntent().getExtras().getString("cidade");
+        }
+
+        if (getIntent().getExtras().containsKey("coordenadas")) {
+            coordenadas = getIntent().getExtras().getString("coordenadas");
         }
 
         layout = (LinearLayout) findViewById(R.id.layoutEscolhaLinha);
@@ -92,6 +96,8 @@ public class ActivityEscolherOnibus extends AppCompatActivity {
         if (isConnected) {
             Intent it = new Intent(ActivityEscolherOnibus.this, ActivityMapa.class);
             it.putExtra("Linha",linha);
+            it.putExtra("cidade",cidade);
+            it.putExtra("coordenadas",coordenadas);
             startActivity(it);
         } else {
             Toast.makeText(ActivityEscolherOnibus.this, "Por favor verifique sua conexão com a Internet!", Toast.LENGTH_LONG).show();

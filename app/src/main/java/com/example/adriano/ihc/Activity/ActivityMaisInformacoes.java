@@ -51,18 +51,11 @@ public class ActivityMaisInformacoes extends AppCompatActivity {
             }
         });
 
-//        if(getIntent().getExtras().containsKey("cidade")){
-//            String cidade = getIntent().getExtras().getString("cidade");
-//            new ComunicaServidor(this).getInformacoes(cidade);
-//        }
+        if(getIntent().getExtras().containsKey("cidade")){
+            String cidade = getIntent().getExtras().getString("cidade");
+            new ComunicaServidor(ActivityMaisInformacoes.this).getInformacoes(cidade);
+        }
 
-        //enquanto não tem o serviço
-        Informacao info = new Informacao(1, "Uberlândia", "Prefeitura de Uberlândia", "http://www.uberlandia.mg.gov.br/?pagina=linhaOnibus");
-        List<Informacao> lista = new ArrayList<>();
-        lista.add(info);
-
-        mostrarEmpresas(lista);
-        //////////////
     }
 
 

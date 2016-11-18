@@ -1,12 +1,7 @@
 package com.example.adriano.ihc.Activity;
 
-import android.content.Context;
 import android.content.Intent;
-import android.location.LocationManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
@@ -23,36 +18,33 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.adriano.ihc.Controller.CalcCoordenadas;
-import com.example.adriano.ihc.Controller.ComunicaServidor;
 import com.example.adriano.ihc.Controller.Localizacao;
-import com.example.adriano.ihc.Model.Atualizacao;
 import com.example.adriano.ihc.Presenter.ActivityMainPresenter;
 import com.example.adriano.ihc.R;
 import com.google.zxing.integration.android.IntentIntegrator;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public class ActivityMain extends AppCompatActivity
 
         implements NavigationView.OnNavigationItemSelectedListener {
     private RelativeLayout layout;
-    private TextView text_linha;
+    private TextView text_linha, textMsgLocalizacao;
     private String code[], pontoDeParada;
     private AlertDialog alerta;
     private Localizacao localizacao;
     private ActivityMainPresenter presenter;
     private ListView listView;
     private ProgressBar progressBar;
+    private ImageView imgMain;
+    pl.droidsonroids.gif.GifTextView gif;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,10 +71,17 @@ public class ActivityMain extends AppCompatActivity
         });
 
         layout = (RelativeLayout)findViewById(R.id.layoutMain);
-
-        localizacao = new Localizacao(ActivityMain.this);
+        imgMain = (ImageView)findViewById(R.id.imgMain);
+        imgMain.setImageResource(R.drawable.inicial);
 
         text_linha = (TextView) findViewById(R.id.text_linha);
+        textMsgLocalizacao = (TextView)findViewById(R.id.textMsgLocalizacao);
+        textMsgLocalizacao.setVisibility(View.INVISIBLE);
+
+        gif = (pl.droidsonroids.gif.GifTextView)findViewById(R.id.gifMain);
+        gif.setVisibility(View.INVISIBLE);
+
+        localizacao = new Localizacao(ActivityMain.this);
 
         presenter = new ActivityMainPresenter(ActivityMain.this);
     }
@@ -97,6 +96,12 @@ public class ActivityMain extends AppCompatActivity
 //        super.onRestart();
 //    }
 
+
+    //só para testes
+    public void escreverNoLog(String log){
+        presenter.escreverNoLog(log);
+    }
+
     public void exibirToast(String msg) {
         Toast.makeText(ActivityMain.this, msg, Toast.LENGTH_SHORT).show();
     }
@@ -104,8 +109,7 @@ public class ActivityMain extends AppCompatActivity
     public void TentarNovamenteBuscarPontosDeParada(){
         final int duracao = 5000;
         Snackbar snackbar = Snackbar
-                .make(layout, "Ops ocorreu uma falha", Snackbar.LENGTH_INDEFINITE)
-                .setDuration(duracao)
+                .make(layout, "Ops ocorreu uma falha", Snackbar.LENGTH_LONG)
                 .setAction("Tentar Novamente", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -123,10 +127,23 @@ public class ActivityMain extends AppCompatActivity
         presenter.atualizarContador();
     }
 
+    public void mostrarImagem(){
+        gif.setVisibility(View.INVISIBLE);
+        imgMain.setVisibility(View.VISIBLE);
+        textMsgLocalizacao.setVisibility(View.INVISIBLE);
+    }
+
+    public void esconderImagem(){
+        gif.setVisibility(View.VISIBLE);
+        imgMain.setVisibility(View.INVISIBLE);
+        textMsgLocalizacao.setVisibility(View.VISIBLE);
+    }
+
+
     //metodo chamado depois que o usuario faz o scanner do Qrcode
     public void mostrarPopupOpcoesDePontodeParada() {
         LayoutInflater li = getLayoutInflater();
-        View view = li.inflate(R.layout.my_dialog_opcoes_parada, null);
+        View view = li.inflate(R.layout.dialog_opcoes_parada, null);
         listView = (ListView) view.findViewById(R.id.listaOpcoesPontoParada);
         listView.setVisibility(View.INVISIBLE);
         progressBar = (ProgressBar) view.findViewById(R.id.progressOpcoesParada);
@@ -215,6 +232,7 @@ public class ActivityMain extends AppCompatActivity
                 Intent it = new Intent(ActivityMain.this, ActivityEscolherOnibus.class);
                 String location = new String(presenter.getMyLocation());
                 String cidade = localizacao.buscar("cidade", location);
+                it.putExtra("coordenadas", location);
                 it.putExtra("cidade", cidade);
                 startActivity(it);
             } catch (Exception e) {

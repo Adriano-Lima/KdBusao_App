@@ -63,6 +63,35 @@
          />
 
 
+    <!--********************************************************************-->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Distância Mínima"
+        android:layout_marginTop="45dp"
+        />
+    <EditText
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:id="@+id/edtMinDistancia"
+        android:inputType="number"
+        android:maxLength="2"
+        />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Velocidade Mínima"
+        android:layout_marginTop="16dp"
+        />
+    <EditText
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:id="@+id/edtMinVelocidade"
+        android:inputType="number"
+        android:maxLength="2"
+        />
+
 
 </LinearLayout>
 

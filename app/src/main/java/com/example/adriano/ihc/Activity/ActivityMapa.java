@@ -2,9 +2,10 @@ package com.example.adriano.ihc.Activity;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Handler;
 import android.support.design.widget.Snackbar;
@@ -12,11 +13,20 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
+import android.util.Base64;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.example.adriano.ihc.Controller.ComunicaServidor;
+import com.example.adriano.ihc.Controller.Localizacao;
 import com.example.adriano.ihc.Model.Bus;
+import com.example.adriano.ihc.Model.Empresa;
 import com.example.adriano.ihc.Model.PontoParada;
 import com.example.adriano.ihc.R;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -29,6 +39,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.vision.text.Text;
 
 import java.util.HashMap;
 import java.util.List;
@@ -37,16 +48,17 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
 
     private LinearLayout layout;
     private GoogleMap mMap;
-    private HashMap<Integer,Marker> markerHash;
+    private HashMap<Integer, Marker> markerHash;
     private PolylineOptions rectOptions;
     private Polyline polyline;
     private Handler handler;
-    private int UPDATE_INTERVAL;
-    private String nmLinha;
+    private int UPDATE_INTERVAL, contador;
+    private String nmLinha, cidade, coordenadas;
     private AlertDialog alerta = null;
-    private AlertDialog.Builder builder;
     private ComunicaServidor comunicaServidor;
     private List<PontoParada> pontosParada;
+    private List<Empresa> empresas;
+    private Localizacao localizacao;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +69,7 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        layout = (LinearLayout)findViewById(R.id.layoutMapa);
+        layout = (LinearLayout) findViewById(R.id.layoutMapa);
 
         SharedPreferences sharedPreferences = getSharedPreferences("MyData", Context.MODE_PRIVATE);
         UPDATE_INTERVAL = sharedPreferences.getInt("TempoAtualizacao", 10);
@@ -68,15 +80,23 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
 
         markerHash = null;
 
-        if(getIntent().getExtras().containsKey("Linha"))
+        if (getIntent().getExtras().containsKey("Linha"))
             nmLinha = getIntent().getExtras().getString("Linha", "");
+        if (getIntent().getExtras().containsKey("cidade"))
+            cidade = getIntent().getExtras().getString("cidade", "");
+        if (getIntent().getExtras().containsKey("coordenadas"))
+            coordenadas = getIntent().getExtras().getString("coordenadas", "");
 
         comunicaServidor = new ComunicaServidor(ActivityMapa.this);
 
+        localizacao = new Localizacao(this);
+
         mostrarSnackBar("Vamos mostar a localização da linha: " + nmLinha);
+
+        contador = 0;
     }
 
-    public void mostrarSnackBar(String msg){
+    public void mostrarSnackBar(String msg) {
         Snackbar snackbar = Snackbar.make(layout, msg, Snackbar.LENGTH_LONG);
         snackbar.show();
     }
@@ -87,11 +107,18 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
             mMap.setMyLocationEnabled(true); //apresentar a localização do usuário
         }
         buscarPontosParada();
+        buscarEmpresas();
+
     }
 
     private void buscarPontosParada() {
         comunicaServidor.getPontos(nmLinha);
     }
+
+    private void buscarEmpresas() {
+        comunicaServidor.getEmpresas(cidade, coordenadas);
+    }
+
 
     //função responsável por adicionar os pontos de parada no mapa
     public void exibirPontosParadaMapa(List<PontoParada> pontos) {
@@ -116,12 +143,59 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         polyline.setPoints(points);
     }
 
+    public void exibirEmpresas(List<Empresa> empresas) {
+        this.empresas = empresas;
+        for (Empresa e : empresas) {
+            LatLng latLng = new LatLng(e.getLatitude(), e.getLongitude());
+            byte[] bytes = Base64.decode(e.getIcon(),Base64.DEFAULT);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            if (bitmap != null) {
+                mMap.addMarker(new MarkerOptions().position(latLng).title(e.getNome()).icon(BitmapDescriptorFactory.fromBitmap(bitmap)));
+            } else {
+                Log.e("Teste", "erro em exibirEmpresas, bitmap é null");
+            }
+        }
+        test();////só para testes
+    }
+
+    //só para teste
+    private void test(){
+        byte[] bytes = Base64.decode(empresas.get(0).getImagem(),Base64.DEFAULT);
+        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        mostrarPopupDadosdaEmpresa(empresas.get(0).getNome(), empresas.get(0).getDescricao(), empresas.get(0).getEndereco() , bitmap);
+    }
+
+
+    //metodo chamado quando o usuario clica em um marker de uma empresa
+    private void mostrarPopupDadosdaEmpresa(String nome, String descricao,String endereco, Bitmap bitmap) {
+        LayoutInflater li = getLayoutInflater();
+        View view = li.inflate(R.layout.dialog_dados_empresa, null);
+        ImageView img = (ImageView)view.findViewById(R.id.imgEmpresa);
+        TextView textNomeEmpresa, textEnderecoEmpresa, textDescricaoEmpresa;
+        textNomeEmpresa = (TextView)view.findViewById(R.id.textNomeEmpresa);
+        textEnderecoEmpresa = (TextView)view.findViewById(R.id.textEnderecoEmpresa);
+        textDescricaoEmpresa = (TextView)view.findViewById(R.id.textDescricaoEmpresa);
+
+        textNomeEmpresa.setText(nome);
+        textDescricaoEmpresa.setText(descricao);
+        textEnderecoEmpresa.setText(endereco);
+        img.setImageBitmap(bitmap);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(view);
+        builder.setCancelable(true);
+
+        alerta = builder.create();
+        alerta.show();
+    }
+
+    //metodo responsavel por plotar no mapa a localizacao dos onibus
     public void setLocalizacaoDosOnibus(List<Bus> lista) {
-        if(markerHash == null){
+        if (markerHash == null) {
             markerHash = new HashMap<>(lista.size());
         }
         for (Bus bus : lista) {
-            updateMarker(bus.getId(),bus.getLat(), bus.getLongi());
+            updateMarker(bus.getId(), bus.getLat(), bus.getLongi());
         }
     }
 
@@ -134,38 +208,20 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         }
     };
 
-    //responsável por atualizar a construção da linha de percurso do ônibus
-    private void updatePolyLine(LatLng latLng) {
-        List<LatLng> points = rectOptions.getPoints();
-        points.add(latLng);
-        polyline.setPoints(points);
-    }
-
     //responsável por atualizar a posição do Marker no mapa(localização do ônibus)
     private void updateMarker(int idOnibus, double x, double y) {
         LatLng latLng = new LatLng(x, y);
-        if(!markerHash.containsKey(idOnibus)){
+        if (!markerHash.containsKey(idOnibus)) {
             Marker marker = mMap.addMarker(new MarkerOptions().position(latLng).title(nmLinha).icon(BitmapDescriptorFactory.fromResource(R.drawable.bus)));
             marker.showInfoWindow(); //para deixar o título sempre visível
             mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
             mMap.animateCamera(CameraUpdateFactory.zoomTo(15), 2000, null);
-            markerHash.put(idOnibus,marker);
-        }else{
+            markerHash.put(idOnibus, marker);
+        } else {
             markerHash.get(idOnibus).setPosition(latLng);
         }
     }
 
-    //fechar alert Dialog
-    private void tryDismiss() {
-        try {
-            if (alerta != null) {
-                alerta.cancel();
-                alerta.dismiss();
-            }
-        } catch (IllegalArgumentException ex) {
-            Log.e("Teste", ex.getMessage());
-        }
-    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -176,7 +232,6 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
     //quando sai da tela primeiro é feito o onPause e depois o onDestroy
     @Override
     protected void onDestroy() {
-        tryDismiss();
         try {
             handler.removeCallbacks(location);//parar de executar o handler, ou seja, parar de fazer as solicitações ao servidor
         } catch (Exception e) {
