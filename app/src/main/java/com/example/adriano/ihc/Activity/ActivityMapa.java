@@ -108,7 +108,6 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         }
         buscarPontosParada();
         buscarEmpresas();
-
     }
 
     private void buscarPontosParada() {
@@ -118,7 +117,6 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
     private void buscarEmpresas() {
         comunicaServidor.getEmpresas(cidade, coordenadas);
     }
-
 
     //função responsável por adicionar os pontos de parada no mapa
     public void exibirPontosParadaMapa(List<PontoParada> pontos) {
@@ -189,16 +187,6 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         alerta.show();
     }
 
-    //metodo responsavel por plotar no mapa a localizacao dos onibus
-    public void setLocalizacaoDosOnibus(List<Bus> lista) {
-        if (markerHash == null) {
-            markerHash = new HashMap<>(lista.size());
-        }
-        for (Bus bus : lista) {
-            updateMarker(bus.getId(), bus.getLat(), bus.getLongi());
-        }
-    }
-
     //responsável por fazer as solicitações ao servidor sobre a localização do ônibus
     Runnable location = new Runnable() {
         @Override
@@ -208,17 +196,33 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         }
     };
 
+    //metodo responsavel por plotar no mapa a localizacao dos onibus
+    public void setLocalizacaoDosOnibus(List<Bus> lista) {
+        if (markerHash == null) {
+            markerHash = new HashMap<>(lista.size());
+        }
+        for (Bus bus : lista) {
+            updateMarker(bus.getId(), bus.getLat(), bus.getLongi(), bus.getSentido());
+        }
+    }
+
     //responsável por atualizar a posição do Marker no mapa(localização do ônibus)
-    private void updateMarker(int idOnibus, double x, double y) {
+    private void updateMarker(int idOnibus, double x, double y, String sentido) {
         LatLng latLng = new LatLng(x, y);
         if (!markerHash.containsKey(idOnibus)) {
-            Marker marker = mMap.addMarker(new MarkerOptions().position(latLng).title(nmLinha).icon(BitmapDescriptorFactory.fromResource(R.drawable.bus)));
+            Marker marker;
+            if(sentido.equals(pontosParada.get(0).getDescricao())){
+                marker = mMap.addMarker(new MarkerOptions().position(latLng).title(nmLinha).snippet("sentido "+sentido).icon(BitmapDescriptorFactory.fromResource(R.drawable.busazul)));
+            }else{
+                marker = mMap.addMarker(new MarkerOptions().position(latLng).title(nmLinha).snippet("sentido "+sentido).icon(BitmapDescriptorFactory.fromResource(R.drawable.buslaranja)));
+            }
             marker.showInfoWindow(); //para deixar o título sempre visível
             mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
             mMap.animateCamera(CameraUpdateFactory.zoomTo(15), 2000, null);
             markerHash.put(idOnibus, marker);
         } else {
             markerHash.get(idOnibus).setPosition(latLng);
+            markerHash.get(idOnibus).setSnippet("sentido "+sentido);
         }
     }
 

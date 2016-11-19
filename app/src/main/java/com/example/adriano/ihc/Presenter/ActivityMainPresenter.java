@@ -55,8 +55,9 @@ public class ActivityMainPresenter {
     private Localizacao localizacao;
     private int cont, tentativaMandarLocalizacao, distanciaMinima, velocidadeMinima;
     private SimpleDateFormat ft;
-    private String code[], mylocation;
+    private String code[], mylocation, sentidoOnibus;
     private SharedPreferences sharedPreferences;
+    private List<PontoParada> pontosdeParada;
 
     private BufferedWriter escritor;
 
@@ -72,7 +73,6 @@ public class ActivityMainPresenter {
         sharedPreferences = activityMain.getSharedPreferences("MyData", Context.MODE_PRIVATE);
         UPDATE_INTERVAL = sharedPreferences.getInt("TempoEnviarLocalizacao", 10);
         UPDATE_INTERVAL *= 1000; //convertendo para milisegundos
-
 
         ft = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 
@@ -141,7 +141,6 @@ public class ActivityMainPresenter {
 //            }
 //        }
 
-
         //só para testes
         code =  new String[2];
         code[0] = "2510";
@@ -157,9 +156,20 @@ public class ActivityMainPresenter {
         //calculando o delta T (diferença de tempo)
         long diffSeconds = (diff / 1000) % 60;
         time = time2;
+
+        //verificar sentido
+        String coordenadasP = pontosdeParada.get(0).getCoordenadas();
+        double dist1 = CalcCoordenadas.distancia(mylocation,coordenadasP);
+        double dist2 = CalcCoordenadas.distancia(location,coordenadasP);
+        if(dist2 < dist1){ //onibus esta ficando mais perto do ponto get(0)
+            sentidoOnibus = pontosdeParada.get(0).getDescricao();
+        }else{//onibus esta ficando mais longe de get(0)
+            sentidoOnibus = pontosdeParada.get(pontosdeParada.size()-1).getDescricao();
+        }
+
         if (cont == 0) {
             String DateToStr = ft.format(new Date());
-            Atualizacao atualizacao = new Atualizacao(code[0], cont, mylocation, DateToStr, "0", "0");
+            Atualizacao atualizacao = new Atualizacao(code[0], cont, mylocation, DateToStr, "0", "0", sentidoOnibus);
             comunicacaoServidor.mandarLocalizacao(atualizacao);
             Log.i("Teste", " --- primeira mensagem eviada--- :" + location);/////////////////
         } else if (!mylocation.equalsIgnoreCase(location)) {
@@ -178,7 +188,7 @@ public class ActivityMainPresenter {
             velocidadeMinima = sharedPreferences.getInt("VelocidadeMinima",10);
             if (distancia >= distanciaMinima && deltaV >= velocidadeMinima) {
                 String DateToStr = ft.format(new Date());
-                Atualizacao atualizacao = new Atualizacao(code[0], cont, mylocation, DateToStr, dist, velocidade);
+                Atualizacao atualizacao = new Atualizacao(code[0], cont, mylocation, DateToStr, dist, velocidade, sentidoOnibus);
                 comunicacaoServidor.mandarLocalizacao(atualizacao);
                 Log.i("Teste", " --- a localizacao foi alterada --- :" + location);/////////////////
             } else if (distancia < distanciaMinima || deltaV < velocidadeMinima) { // usuario deve estar parado
@@ -259,12 +269,11 @@ public class ActivityMainPresenter {
     }
 
     public void buscarPontosdeParada(){
-        activityMain.setText_linha("Abordo:" + code[1]);
         activityMain.mostrarPopupOpcoesDePontodeParada();
-        getPontos(code[1]);
+        getPontosdeParada(code[1]);
     }
 
-    private void getPontos(String linha) {
+    private void getPontosdeParada(String linha) {
         Gson gson = new GsonBuilder()
                 .setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
                 .create();
@@ -277,13 +286,14 @@ public class ActivityMainPresenter {
         call.enqueue(new Callback<List<PontoParada>>() {
             @Override
             public void onResponse(Call<List<PontoParada>> call, Response<List<PontoParada>> response) {
-                int code = response.code();
-                if (code == 200) {
-                    List<PontoParada> lista = response.body(); //resposta do servidor
+                int cod = response.code();
+                if (cod == 200) {
+                    pontosdeParada = response.body(); //resposta do servidor
                     List<String> pontos = new ArrayList<String>();
-                    for (PontoParada p : lista) {
+                    for (PontoParada p : pontosdeParada) {
                         pontos.add(new String(p.getDescricao()));
                     }
+                    activityMain.setText_linha("Abordo:" + code[1]);
                     activityMain.mostrarListaOpcoesPontosDeParada(pontos);
                 } else { //caso a resposta nao seja 200 ok
                     activityMain.TentarNovamenteBuscarPontosDeParada();

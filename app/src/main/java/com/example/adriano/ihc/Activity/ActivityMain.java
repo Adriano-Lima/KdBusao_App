@@ -86,17 +86,6 @@ public class ActivityMain extends AppCompatActivity
         presenter = new ActivityMainPresenter(ActivityMain.this);
     }
 
-//    @Override
-//    protected void onRestart() {
-//        //Log.i("Teste", "passou pelo onRestart()");
-//        presenter.iniciarServicoAtualizarLocalizacao();
-//        if(presenter.getFlag()){
-//            presenter.iniciarServicoMandarLocalizacao();
-//        }
-//        super.onRestart();
-//    }
-
-
     //só para testes
     public void escreverNoLog(String log){
         presenter.escreverNoLog(log);
@@ -139,7 +128,6 @@ public class ActivityMain extends AppCompatActivity
         textMsgLocalizacao.setVisibility(View.VISIBLE);
     }
 
-
     //metodo chamado depois que o usuario faz o scanner do Qrcode
     public void mostrarPopupOpcoesDePontodeParada() {
         LayoutInflater li = getLayoutInflater();
@@ -177,8 +165,6 @@ public class ActivityMain extends AppCompatActivity
             }
         });
     }
-
-
 
     //leitura do QrCode
     public void ScanQrCode() {
@@ -265,14 +251,4 @@ public class ActivityMain extends AppCompatActivity
         presenter.pararServicoAtualizarLocalizacao();
         super.onDestroy();
     }
-
-
-//    @Override
-//    protected void onStop() {
-//        presenter.pararServicoAtualizarLocalizacao();
-//        if(presenter.getFlag()){
-//            presenter.pararServicoMandarLocalizacao();
-//        }
-//        super.onStop();
-//    }
 }
