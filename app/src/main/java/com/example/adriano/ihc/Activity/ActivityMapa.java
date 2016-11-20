@@ -7,11 +7,11 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.util.Base64;
 import android.util.Log;
@@ -19,8 +19,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.example.adriano.ihc.Controller.ComunicaServidor;
@@ -39,12 +37,11 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.android.gms.vision.text.Text;
 
 import java.util.HashMap;
 import java.util.List;
 
-public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback {
+public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private LinearLayout layout;
     private GoogleMap mMap;
@@ -94,6 +91,7 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         mostrarSnackBar("Vamos mostar a localização da linha: " + nmLinha);
 
         contador = 0;
+
     }
 
     public void mostrarSnackBar(String msg) {
@@ -145,7 +143,7 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         this.empresas = empresas;
         for (Empresa e : empresas) {
             LatLng latLng = new LatLng(e.getLatitude(), e.getLongitude());
-            byte[] bytes = Base64.decode(e.getIcon(),Base64.DEFAULT);
+            byte[] bytes = Base64.decode(e.getIcon(), Base64.DEFAULT);
             Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
             if (bitmap != null) {
                 mMap.addMarker(new MarkerOptions().position(latLng).title(e.getNome()).icon(BitmapDescriptorFactory.fromBitmap(bitmap)));
@@ -153,26 +151,22 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
                 Log.e("Teste", "erro em exibirEmpresas, bitmap é null");
             }
         }
-        test();////só para testes
     }
 
-    //só para teste
-    private void test(){
-        byte[] bytes = Base64.decode(empresas.get(0).getImagem(),Base64.DEFAULT);
-        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-        mostrarPopupDadosdaEmpresa(empresas.get(0).getNome(), empresas.get(0).getDescricao(), empresas.get(0).getEndereco() , bitmap);
-    }
 
 
     //metodo chamado quando o usuario clica em um marker de uma empresa
-    private void mostrarPopupDadosdaEmpresa(String nome, String descricao,String endereco, Bitmap bitmap) {
+    private void mostrarPopupDadosdaEmpresa(String nome, String descricao, String endereco, Bitmap bitmap) {
+
+
         LayoutInflater li = getLayoutInflater();
+
         View view = li.inflate(R.layout.dialog_dados_empresa, null);
-        ImageView img = (ImageView)view.findViewById(R.id.imgEmpresa);
+        ImageView img = (ImageView) view.findViewById(R.id.imgEmpresa);
         TextView textNomeEmpresa, textEnderecoEmpresa, textDescricaoEmpresa;
-        textNomeEmpresa = (TextView)view.findViewById(R.id.textNomeEmpresa);
-        textEnderecoEmpresa = (TextView)view.findViewById(R.id.textEnderecoEmpresa);
-        textDescricaoEmpresa = (TextView)view.findViewById(R.id.textDescricaoEmpresa);
+        textNomeEmpresa = (TextView) view.findViewById(R.id.textNomeEmpresa);
+        textEnderecoEmpresa = (TextView) view.findViewById(R.id.textEnderecoEmpresa);
+        textDescricaoEmpresa = (TextView) view.findViewById(R.id.textDescricaoEmpresa);
 
         textNomeEmpresa.setText(nome);
         textDescricaoEmpresa.setText(descricao);
@@ -211,10 +205,10 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         LatLng latLng = new LatLng(x, y);
         if (!markerHash.containsKey(idOnibus)) {
             Marker marker;
-            if(sentido.equals(pontosParada.get(0).getDescricao())){
-                marker = mMap.addMarker(new MarkerOptions().position(latLng).title(nmLinha).snippet("sentido "+sentido).icon(BitmapDescriptorFactory.fromResource(R.drawable.busazul)));
-            }else{
-                marker = mMap.addMarker(new MarkerOptions().position(latLng).title(nmLinha).snippet("sentido "+sentido).icon(BitmapDescriptorFactory.fromResource(R.drawable.buslaranja)));
+            if (sentido.equals(pontosParada.get(0).getDescricao())) {
+                marker = mMap.addMarker(new MarkerOptions().position(latLng).title(nmLinha).snippet("sentido " + sentido).icon(BitmapDescriptorFactory.fromResource(R.drawable.busazul)));
+            } else {
+                marker = mMap.addMarker(new MarkerOptions().position(latLng).title(nmLinha).snippet("sentido " + sentido).icon(BitmapDescriptorFactory.fromResource(R.drawable.buslaranja)));
             }
             marker.showInfoWindow(); //para deixar o título sempre visível
             mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
@@ -222,7 +216,7 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
             markerHash.put(idOnibus, marker);
         } else {
             markerHash.get(idOnibus).setPosition(latLng);
-            markerHash.get(idOnibus).setSnippet("sentido "+sentido);
+            markerHash.get(idOnibus).setSnippet("sentido " + sentido);
         }
     }
 
@@ -230,6 +224,7 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        mMap.setOnMarkerClickListener(this);
         apresentar();
     }
 
@@ -242,5 +237,19 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
             Log.i("Teste", "Erro:" + e.getMessage());
         }
         super.onDestroy();
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+
+        for (Empresa e : empresas) {
+            if(marker.getTitle().equals(e.getNome())){
+                byte[] bytes = Base64.decode(e.getImagem(), Base64.DEFAULT);
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                mostrarPopupDadosdaEmpresa(e.getNome(), e.getDescricao(), e.getEndereco(), bitmap);
+            }
+        }
+
+        return false;
     }
 }
