@@ -74,7 +74,7 @@ public class ActivityMainPresenter {
         UPDATE_INTERVAL = sharedPreferences.getInt("TempoEnviarLocalizacao", 10);
         UPDATE_INTERVAL *= 1000; //convertendo para milisegundos
 
-        ft = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        ft = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
         localizacao = new Localizacao(activityMain);
         iniciarServicoAtualizarLocalizacao();

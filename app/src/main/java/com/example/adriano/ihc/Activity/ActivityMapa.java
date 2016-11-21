@@ -157,8 +157,6 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
 
     //metodo chamado quando o usuario clica em um marker de uma empresa
     private void mostrarPopupDadosdaEmpresa(String nome, String descricao, String endereco, Bitmap bitmap) {
-
-
         LayoutInflater li = getLayoutInflater();
 
         View view = li.inflate(R.layout.dialog_dados_empresa, null);
@@ -217,6 +215,10 @@ public class ActivityMapa extends FragmentActivity implements OnMapReadyCallback
         } else {
             markerHash.get(idOnibus).setPosition(latLng);
             markerHash.get(idOnibus).setSnippet("sentido " + sentido);
+            if(sentido.equals(pontosParada.get(0).getDescricao()))
+                markerHash.get(idOnibus).setIcon(BitmapDescriptorFactory.fromResource(R.drawable.busazul));
+            else
+                markerHash.get(idOnibus).setIcon(BitmapDescriptorFactory.fromResource(R.drawable.buslaranja));
         }
     }
 
